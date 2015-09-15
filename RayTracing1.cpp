@@ -28,7 +28,7 @@ vector<float> vector_difference(vector<float> a, vector<float> b) {
 vector<float> vector_addition(vector<float> a, vector<float> b) {
 	vector<float> result;
 	for(int i = 0; i < a.size(); i++) {
-		result.push_back(a[1] + b[i]);
+		result.push_back(a[i] + b[i]);
 	}
 	return result;
 
@@ -42,7 +42,7 @@ vector<float> scalar_multiplication(vector<float> a, float scalar) {
 	return result;
 }
 
-vector<float> world_points(int i, int j, float r, int res) {
+vector<float> pixel_points(int i, int j, float r, int res) {
 	//r = b = -l = -t
 	vector<float> world;
 	world.push_back((2*r)*(i+.5)/res);
@@ -53,11 +53,28 @@ vector<float> world_points(int i, int j, float r, int res) {
 
 bool ray_tri_intersect(vector<float> eye, vector<float> dir, vector<vector<float> > vertices) {
 	cout << "Checking intersection on polygon " << endl;
-	for(int i = 0; i < vertices.size(); i++)
-		printv(vertices[i]);
+	vector<float> a = vertices[0];
+	vector<float> b = vertices[1];
+	vector<float> c = vertices[2];
+	int x = 0;
+	int y = 1;
+	int z = 2;
+
+	cout << "ray = eye + t*dir" << endl;
+	cout << "ray = ";
+	printv(eye);
+	cout << " + t* ";
+	printv(dir);
+	cout << endl;
 
 	//solve for beta, gamma, t
-
+	//using dummy variable names for readability with cramer's rule
+	float ei_hf = (a[y] - c[y]) * dir[z] - dir[y] * (a[z] - c[z]);
+	float gf_di = dir[x] * (a[z] - c[z]) - (a[x] - c[x]) * dir[z];
+	float dh_eg = (a[x] - c[x]) * dir[y] - dir[x] * (a[y] - c[y]);
+	float ei_hf = (a[y] - c[y]) * dir[z] - dir[y] * (a[z] - c[z]);
+	float gf_di = dir[x] * (a[z] - c[z]) - (a[x] - c[x]) * dir[z];
+	float dh_eg = (a[x] - c[x]) * dir[y] - dir[x] * (a[y] - c[y]);
 
 
 
@@ -190,10 +207,11 @@ int main(int argc, char** argv) {
 
 	//initializing camera view
 	float dist = sqrt(pow(from[0]-at[0], 2) + pow(from[1]-at[1], 2) + pow(from[2]-at[2], 2));
+	float r = dist * tan((angle/2) * (PI/180));
+	//in this case, r = t = -l = -b
+	printf("r = %f\n", r);
 
-	vector<float> z_axis;
-	for(int i = 0; i < from.size(); i++)
-		z_axis.push_back(from[i] - at[i]);
+	vector<float> z_axis = vector_difference(from, at);
 	normalize(z_axis);
 	cout << "normalized z-axis = ";
 	printv(z_axis);
@@ -208,67 +226,26 @@ int main(int argc, char** argv) {
 	cout << "normalized y-axis = ";
 	printv(y_axis);
 
-	float r = dist * tan((angle/2) * (PI/180));
-	float rminl = r * 2;
-	float t = dist * tan((angle/2) * (PI/180));
-	float tminb = t * 2;
-	printf("r = %f\n", r);
-
-	/*cout << "polygons = " << p_num << endl;
-	cout << "p.size = " << p.size() << endl;
-	cout << "p0.size = " << p[0].size() << endl;
-	cout << "p00.size = " << p[0][0].size() << endl;
-
-	cout << p[0][0][0] << endl;
-	cout << p[0][0][1] << endl;
-	cout << p[0][0][2] << endl;
-	 */
-
 	//start raytracing
 	//sample run
-	int x = 205;
-	int y = 205;
-	int p_sub = 0;
-	//cout << endl << x << ", " << y << ", dist:" << endl;
-	vector<float> poop = world_points(x, y, r, res_x);
-	poop.push_back(at[2]);
-	//printv(poop);
-	//cout << "Origin = ";
-	//printv(from);
-	//cout << "Toward = ";
-	//printv(poop);
-	//ray_tri_intersect(from, poop, p[p_sub]);
+	int x = 255;
+	int y = 255;
+	int p_idx = 0;
 
-	vector<float> test1;
-	vector<float> test2;
-	test1.push_back(1);
-	test1.push_back(1);
-	test2.push_back(2);
-	test2.push_back(2);
-	printv(vector_difference(test2, test1));
+	//bottom left of image plane
+	//at - rx - ry
+	vector<float> bottom_left = vector_difference(vector_difference(at, scalar_multiplication(x_axis, r)), scalar_multiplication(y_axis, r));
 
-
-
-	vector<float> bottom_left = vector_difference(at, scalar_multiplication(x_axis, r));
-	bottom_left = vector_difference(bottom_left, scalar_multiplication(y_axis, r));
-	cout << "bottom left = ";
-	printv(bottom_left);
-	cout << "hx = " << endl;
-	printv(scalar_multiplication(x_axis, r));
-	cout << "hy = " << endl;
-	printv(scalar_multiplication(y_axis, r));
-	//sample pixel 0, 0
-	int polygon = 0;
-	vector<float> pixel_pos = world_points(x, y, r, res_x);
-	printv(pixel_pos);
-	//pixel_pos = vector_addition(bottom_left, scalar_multiplication(x_axis, pixel_pos[0]));
-	cout << "ipos = ";
-	printv(scalar_multiplication(x_axis, pixel_pos[0]));
-	cout << "jpos = ";
-	printv(scalar_multiplication(y_axis, pixel_pos[1]));
-	pixel_pos = vector_addition(pixel_pos, scalar_multiplication(y_axis, pixel_pos[1]));
+	//position of current pixel center
+	vector<float> pixel_pos = pixel_points(x, y, r, res_x);
+	pixel_pos = vector_addition(vector_addition(bottom_left, scalar_multiplication(x_axis, pixel_pos[0])), scalar_multiplication(y_axis, pixel_pos[1]));
 	cout << "pixel position = ";
 	printv(pixel_pos);
+
+	//now we have a ray
+	//intersect it with current polygon
+	vector<float> dir = vector_difference(pixel_pos, from);
+	ray_tri_intersect(from, dir, p[p_idx]);
 
 	/*
 	unsigned char pixels[res_x][res_y][3];
