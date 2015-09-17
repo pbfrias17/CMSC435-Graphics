@@ -19,7 +19,6 @@ void printv(vector<float> vf) {
 vector<float> vector_difference(vector<float> a, vector<float> b) {
 	vector<float> result;
 	for(int i = 0; i < a.size(); i++) {
-		//cout << a[i] << " - " << b[i] << " = " << a[i] - b[i] << endl;
 		result.push_back(a[i] - b[i]);
 	}
 	return result;
@@ -50,6 +49,15 @@ void normalize(vector<float> &v) {
 }
 
 
+float dot_product(vector<float> a, vector<float> b) {
+	float result = 0;
+	for(int i = 0; i < a.size(); i++) {
+		result += a[i] * b[i];
+	}
+	return result;
+}
+
+
 vector<float> cross_product(vector<float> a, vector<float> b) {
 	vector<float> result;
 	result.push_back(a[1]*b[2] - a[2] * b[1]);
@@ -62,14 +70,13 @@ vector<float> cross_product(vector<float> a, vector<float> b) {
 vector<float> pixel_points(int i, int j, float r, int res) {
 	//r = b = -l = -t
 	vector<float> world;
-	world.push_back((2*r)*(i+.5)/res);
-	world.push_back((2*r)*(j+.5)/res);
+	world.push_back(-r + (2*r)*(i+.5)/res);
+	world.push_back(-r + (2*r)*(j+.5)/res);
 	return world;
 }
 
 
 bool ray_tri_intersect(vector<float> eye, vector<float> dir, vector<vector<float> > vertices, float interval[]) {
-	//cout << "Checking intersection on polygon " << endl;
 	vector<float> a = vertices[0];
 	vector<float> b = vertices[1];
 	vector<float> c = vertices[2];
@@ -77,13 +84,6 @@ bool ray_tri_intersect(vector<float> eye, vector<float> dir, vector<vector<float
 	int y = 1;
 	int z = 2;
 
-	/*cout << "ray = eye + t*dir" << endl;
-	cout << "ray = ";
-	printv(eye);
-	cout << " + t* ";
-	printv(dir);
-	cout << endl;
-	*/
 	//solve for beta, gamma, t
 	//using dummy variable names for readability with cramer's rule
 	float ei_hf = ((a[y] - c[y]) * dir[z]) - (dir[y] * (a[z] - c[z]));
@@ -101,7 +101,6 @@ bool ray_tri_intersect(vector<float> eye, vector<float> dir, vector<vector<float
 
 	float gamma = dir[z] * ak_jb + dir[y] * jc_al + dir[x] * bl_kc;
 	gamma = gamma/M;
-	cout << gamma << endl;
 	if(gamma < 0 || gamma > 1)
 		return false;
 
@@ -127,16 +126,13 @@ int main(int argc, char** argv) {
 	float hither;
 	int res_x;
 	int res_y;
-	int poly_num = 0;
 	int p_num = 0;
 
 	fp = fopen("tetra-3.nff" , "r");
-	if(fp == NULL)
+	if(fp == NULL) {
 		cout << "File not found" << endl;
-	else
-		cout << "File opened for reading" << endl;
-	cout << "Parsing .nff file..." << endl << endl;
-
+		return 1;
+	}
 
 	char str1[20];
 	char str2[20];
@@ -145,8 +141,6 @@ int main(int argc, char** argv) {
 	//parse through file and update data structures
 	while(fgets(line, sizeof(line), fp)) {
 		char poly_vertices_str[8];
-		//printf("%s", line);
-
 		if(line[0] == 'v') {
 			//indicates viewpoint
 		} else if((line[0] == 'a' && line[1] == 'n') || line[0] == 'h') {
@@ -192,7 +186,6 @@ int main(int argc, char** argv) {
 				f.push_back(f3);
 			} else if(line[0] == 'p') {
 				p_num++;
-				//printf("Start polygon tracing\n");
 				sscanf(line, "%*s %s", poly_vertices_str);
 				vector<vector<float> > vertices;
 				vector<float> point;
@@ -212,81 +205,93 @@ int main(int argc, char** argv) {
 		}
 	}
 
-	printf("from = %f %f %f\n", from[0], from[1], from[2]);
-	printf("at = %f %f %f\n", at[0], at[1], at[2]);
-	printf("up = %f %f %f\n", up[0], up[1], up[2]);
-
 	//initializing camera view
 	float dist = sqrt(pow(from[0]-at[0], 2) + pow(from[1]-at[1], 2) + pow(from[2]-at[2], 2));
 	float r = dist * tan((angle/2) * (PI/180));
 	//in this case, r = t = -l = -b
-	printf("r = %f\n", r);
 
 	vector<float> z_axis = vector_difference(from, at);
 	normalize(z_axis);
-	cout << "normalized z-axis = ";
-	printv(z_axis);
 
-	vector<float> x_axis = cross_product(up, z_axis);
+	vector<float> y_axis = cross_product(up, z_axis);
+	normalize(y_axis);
+
+	vector<float> x_axis = cross_product(z_axis, y_axis);
 	normalize(x_axis);
-	cout << "normalized x-axis = ";
+
+	cout << "from = ";
+	printv(from);
+	cout << "at = ";
+	printv(at);
+	cout << "up = ";
+	printv(up);
+
+	cout << "z_axis = ";
+	printv(z_axis);
+	cout << "y_axis = ";
+	printv(y_axis);
+	cout << "x_axis = ";
 	printv(x_axis);
 
-	vector<float> y_axis = cross_product(x_axis, z_axis);
-	normalize(y_axis);
-	cout << "normalized y-axis = ";
-	printv(y_axis);
+	cout << "z.y = " << dot_product(z_axis, y_axis) << endl;
+	cout << "y.x = " << dot_product(y_axis, x_axis) << endl;
+	cout << "x.z = " << dot_product(x_axis, z_axis) << endl;
 
-	//bottom left of image plane
-	//at - rx - ry
+	cout << "from - dw = at = ";
+	printv(vector_difference(from, scalar_multiplication(z_axis, dist)));
+
+
+	int true_c = 0;
+	int false_c = 0;
+
     unsigned char pixels[res_x][res_y][3];
-	vector<float> bottom_left = vector_difference(vector_difference(at, scalar_multiplication(x_axis, r)), scalar_multiplication(y_axis, r));
-	float interval[2] = {0, 1000000};
-	int true_count = 0;
-	int false_count = 0;
-	for(int x = 254; x < 255; x++) {
-		for(int y = 254; y < 255; y++) {
-			cout << "RayCasting to pixel " << x << ", " << y << endl;
+	float interval[2] = {0, 10};
+	for(int y = 255; y < 256; y++) {
+		for(int x = 255; x < 256; x++) {
 			//since a pixel color is decided by a rayhit, once we hit
 			//any object we can color the pixel and move on to the next pixel
 			bool hit = false;
+			vector<float> pp = pixel_points(x, y, r, res_x);
+			//direction = u(x-axis) + v(y-axis) + distance(-z_axis)
+			vector<float> dir = vector_addition(scalar_multiplication(x_axis, pp[0]), scalar_multiplication(y_axis, pp[1]));
+			dir = vector_addition(dir, scalar_multiplication(z_axis, -dist));
+
+			vector<float> target = vector_addition(from, scalar_multiplication(x_axis, pp[0]));
+			target = vector_addition(target, scalar_multiplication(y_axis, pp[1]));
+			target = vector_addition(target, scalar_multiplication(z_axis, -dist));
+			printv(target);
+
+			//printv(dir);
 			if(!hit) {
 				for(int i = 0; i < p.size(); i++) {
-					vector<float> pixel_pos = pixel_points(x, y, r, res_x);
-					pixel_pos = vector_addition(vector_addition(bottom_left, scalar_multiplication(x_axis, pixel_pos[0])), scalar_multiplication(y_axis, pixel_pos[1]));
-					vector<float> dir = vector_difference(pixel_pos, from);
-					//now we have a ray
-					//check intersections with current polygon
-					cout << ray_tri_intersect(from, dir, p[i], interval) << endl;
-					/*
+					//check ray intersections with current polygons
 					if(ray_tri_intersect(from, dir, p[i], interval)) {
-						true_count++;
 						pixels[y][x][0] = f[0];
 						pixels[y][x][1] = f[1];
 						pixels[y][x][2] = f[2];
+						true_c++;
 						hit = true;
 					} else {
-						false_count++;
+						false_c++;
 						pixels[y][x][0] = b[0];
 						pixels[y][x][1] = b[1];
 						pixels[y][x][2] = b[2];
-					}*/
+					}
 				}
 			}
 		}
 	}
-
-	cout << "true: " << true_count << endl;
-	cout << "false: " << false_count << endl;
 	fclose(fp);
-	/*
+	cout << "true: " << true_c << endl;
+	cout << "false: " << false_c << endl;
+
+	//write output to file
 	FILE *fo = fopen("trace.ppm","wb");
 	if(fo == NULL)
 		printf("DIDN't WORK!!!\n");
 	fprintf(fo, "P6\n%d %d\n%d\n", res_x, res_y, 255);
 	fwrite(pixels, 1, res_x*res_y*3, fo);
 	fclose(fo);
-	*/
 
 	return 0;
 
