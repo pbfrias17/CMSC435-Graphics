@@ -153,10 +153,11 @@ int main(int argc, char** argv) {
 	while(fgets(line, sizeof(line), fp)) {
 		cout << line;
 		//ignore polygonal patches
-		if(line[0] == 'p' && line[1] == 'p')
-			break;
+		//if(line[0] == 'p' && line[1] == 'p')
+		//	break;
 		char poly_vertices_str[8];
 
+		/*
 		if(line[0] == 'v') {
 			//indicates viewpoint
 		} else if((line[0] == 'a' && line[1] == 'n') || line[0] == 'h') {
@@ -201,18 +202,17 @@ int main(int argc, char** argv) {
 				char str4[20];
 				char str5[20];
 				vector<float> vf;
-				f.push_back(vf);
-				f[f_num].push_back(f1);
-				f[f_num].push_back(f2);
-				f[f_num].push_back(f3);
+				vf.push_back(f1);
+				vf.push_back(f2);
+				vf.push_back(f3);
 				sscanf(line, "%*s %*s %*s %*s %s %s %s %s %s", str1, str2, str3, str4, str5);
 				//ks, kd, e, kt, ir
-				f[f_num].push_back(atof(str1));
-				f[f_num].push_back(atof(str2));
-				f[f_num].push_back(atof(str3));
-				f[f_num].push_back(atof(str4));
-				f[f_num].push_back(atof(str5));
-				f_num++;
+				vf.push_back(atof(str1));
+				vf.push_back(atof(str2));
+				vf.push_back(atof(str3));
+				vf.push_back(atof(str4));
+				vf.push_back(atof(str5));
+				f.push_back(vf);
 			} else if(line[0] == 'p') {
 				p_num++;
 				sscanf(line, "%*s %s", poly_vertices_str);
@@ -231,13 +231,13 @@ int main(int argc, char** argv) {
 				p.push_back(vertices);
 				vertices.clear();
 			}
-		}
+		}*/
 
 	}
 	cout << endl;
-	for(int i = 0; i < f_num; i++) {
+	for(int i = 0; i < f.size(); i++) {
 		cout << "f ";
-		printv(f[f_num]);
+		printv(f[i]);
 	}
 	/*
 	cout << endl;
